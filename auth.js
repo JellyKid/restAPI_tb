@@ -1,32 +1,35 @@
-var passport = require('passport')
-,   fixtures = require('./fixtures')
-,   _ = require('lodash')
-,   LocalStrategy = require('passport-local').Strategy;
+var passport = require('passport'),
+    fixtures = require('./fixtures'),
+    _ = require('lodash'),
+    LocalStrategy = require('passport-local').Strategy
+    db = require('./db'),
+    User = db.model('User');
  
  
 passport.serializeUser(function(user,done){
     done(null, user.id);
 });
- 
-passport.deserializeUser(function(id,done){
-    var user = _.find(fixtures.users,function(user){
-        return user.id === id
-    });
-    
-    user ? done(null, user) : done(null, false);
-    
-});
 
+
+passport.deserializeUser(function(id,done){
+    User.findOne({id: id}, function(err, user){
+        if(err){return err};
+        done(null, user ? user : false);
+    });
+});
 
 passport.use(new LocalStrategy(
     function(username, password, done){
-        var user = _.find(fixtures.users,'id',username);
-        
-        if (user){
-            return user.password === password ? done(null, user) : done(null, false, {message: 'Incorrect password.'});
-        }
-        
-        done(null, false, {message: "Incorrect username."});
+        User.findOne({id: username}, function(err, user){
+            if(err){return done(err)};
+            if(user){
+                if(user.password === password){
+                    return done(null, user);
+                };
+                return done(null, false, {message: 'Incorrect password.'});
+            }
+            return done(null, false, {message: "Incorrect username."});
+        });
  }));
 
 module.exports = passport;

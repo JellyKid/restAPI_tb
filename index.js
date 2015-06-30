@@ -40,7 +40,7 @@ function addUser(req,res){
     var newuser = new User(req.body.user);
     
     newuser.save(function(err, user){
-        if(err.code === 11000){
+        if(err && err.code === 11000){
             return res.sendStatus(409);
         }
         
