@@ -39,17 +39,16 @@ function addUser(req,res){
     console.log('wtf');
     var newuser = new User(req.body.user);
     
-    newuser.save(function(err){
+    newuser.save(function(err, user){
         if(err.code === 11000){
             return res.sendStatus(409);
         }
+        
+        req.login(user, function(err){
+            if (err) {return res.sendStatus(500)}
+            return res.sendStatus(200)
+        })
     })
-    
-    req.login(req.body.user, function(err){
-        if (err) {return res.sendStatus(500)}
-    });
-    
-    return res.sendStatus(200)
 };
 
 function logOutUser(req, res){
