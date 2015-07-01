@@ -24,8 +24,9 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
-app.get('/api/users/:userId', handleUsers);
+app.get('/api/users/:userId', getUser);
 app.post('/api/users', bodyParser.json(), addUser);
+app.put('/api/users/:userId', checkAuth, changePassword);
 
 app.get('/api/tweets', handleTweets);
 app.get('/api/tweets/:tweetId', getTweet);
@@ -50,6 +51,8 @@ function addUser(req,res){
         })
     })
 };
+
+
 
 function logOutUser(req, res){
     req.logout();
@@ -92,39 +95,25 @@ function deleteTweet(req, res){
   
 }
 
+
+
 function addTweet(req,res){
     
-    var newtweet = req.body.tweet;
-    
-    newtweet["userId"] = req.user.id;
-    
-    newtweet["id"] = shortId.generate();
-    
     date = new Date();
-    newtweet["created"] = date.getTime()/1000|0;
     
-    fixtures.tweets.push(newtweet)
-    
-    res.send({tweet : newtweet})
-    
-}
-
-function createUser(req,res){
-    var newuser = req.body.user;
-    
-    if (_.find(fixtures.users,'id',newuser["id"])) {
-        return res.sendStatus(409)
-    } else {
-        newuser["followingIds"] = [];
-        fixtures.users.push(newuser);
-    }
-    
-    req.login(newuser, function(err){
-        if (err) {return res.sendStatus(500)}
+    var tweet = new Tweet({
+        userId: req.user.id,
+        created: date.getTime()/1000|0,
+        text: req.body.tweet.text
     });
     
-    return res.sendStatus(200)
+    tweet.save(function(err){
+        if(err){return err};
+    })
+    
+    res.send(tweet.toClient())    
 }
+
 
 function handleTweets(req,res){
     var userId = req.query.userId;
@@ -144,16 +133,20 @@ function handleTweets(req,res){
     });
 };
 
-function handleUsers(req,res){
-    
-    var userId = req.params.userId;
-    
-    var userInfo = fixtures.users[_.findIndex(fixtures.users,function(key){
-        return key.id === userId;
-    })];
-    
-    return userInfo ? res.send({user : userInfo}) : res.sendStatus(404);
+function changePassword(req, res){
+    User.findOneAndUpdate({id: req.params.userId},{password: req.body.password},function(err,user){
+        if (err){return err};
+        return res.sendStatus(user ? 200 : 403);
+    })
 }
+
+function getUser(req, res){
+    User.findOne({id: req.params.userId},function(err,user){
+        if(err){return err}
+        return user ? res.send({user: user}) : res.sendStatus(404);
+    });
+};
+
 
 function getTweet(req,res){
     
