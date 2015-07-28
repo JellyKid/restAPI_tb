@@ -1,9 +1,8 @@
 var passport = require('passport'),
-    fixtures = require('./fixtures'),
-    _ = require('lodash'),
     LocalStrategy = require('passport-local').Strategy
     db = require('./db'),
-    User = db.model('User');
+    User = db.model('User'),
+    bcrypt = require('bcryptjs');
  
  
 passport.serializeUser(function(user,done){
@@ -23,12 +22,17 @@ passport.use(new LocalStrategy(
         User.findOne({id: username}, function(err, user){
             if(err){return done(err)};
             if(user){
-                if(user.password === password){
-                    return done(null, user);
-                };
-                return done(null, false, {message: 'Incorrect password.'});
+                bcrypt.compare(password,user.password,function(err,same){
+                    if(same){
+                        return done(null, user);
+                    } else {
+                        return done(null, false, {message: 'Incorrect password.'});
+                    }
+                })
+            } else {
+                return done(null, false, {message: "Incorrect username."});
             }
-            return done(null, false, {message: "Incorrect username."});
+            
         });
  }));
 
